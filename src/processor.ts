@@ -1,5 +1,6 @@
 import type { LimitlessApiClient } from './api'
 import { LifelogDatabase } from './database'
+import { LimitlessApiError, ProcessingError, ValidationError } from './errors'
 import { LifelogService } from './lifelogs'
 import type { Lifelog } from './schemas'
 
@@ -16,38 +17,74 @@ export class LifelogProcessor {
     fetched: number
     processed: number
     skipped: number
+    failed: number
     newLifelogs: Lifelog[]
+    errors: ProcessingError[]
   }> {
     console.log('Fetching starred lifelogs...')
-    const allStarredLifelogs = await this.service.fetchStarredLifelogs()
+
+    let allStarredLifelogs: Lifelog[]
+    try {
+      allStarredLifelogs = await this.service.fetchStarredLifelogs()
+    } catch (error) {
+      if (error instanceof LimitlessApiError) {
+        throw new ProcessingError(
+          'Failed to fetch starred lifelogs from API',
+          undefined,
+          error,
+        )
+      }
+      if (error instanceof ValidationError) {
+        throw new ProcessingError(
+          'API response validation failed',
+          undefined,
+          error,
+        )
+      }
+      throw error
+    }
 
     console.log(`Found ${allStarredLifelogs.length} starred lifelogs`)
 
     const newLifelogs: Lifelog[] = []
+    const errors: ProcessingError[] = []
     let processed = 0
     let skipped = 0
+    let failed = 0
 
     for (const lifelog of allStarredLifelogs) {
-      if (this.database.isProcessed(lifelog.id)) {
-        console.log(`Skipping already processed lifelog: ${lifelog.title}`)
-        skipped++
-        continue
+      try {
+        if (this.database.isProcessed(lifelog.id)) {
+          console.log(`Skipping already processed lifelog: ${lifelog.title}`)
+          skipped++
+          continue
+        }
+
+        console.log(`Processing new lifelog: ${lifelog.title}`)
+
+        await this.processLifelog(lifelog)
+        this.database.markAsProcessed(lifelog)
+        newLifelogs.push(lifelog)
+        processed++
+      } catch (error) {
+        console.error(`Failed to process lifelog ${lifelog.id}: ${error}`)
+        const processingError = new ProcessingError(
+          `Failed to process lifelog: ${lifelog.title}`,
+          lifelog.id,
+          error as Error,
+        )
+        errors.push(processingError)
+        failed++
       }
-
-      console.log(`Processing new lifelog: ${lifelog.title}`)
-
-      await this.processLifelog(lifelog)
-
-      this.database.markAsProcessed(lifelog)
-      newLifelogs.push(lifelog)
-      processed++
     }
 
     return {
       fetched: allStarredLifelogs.length,
       processed,
       skipped,
+      failed,
       newLifelogs,
+      errors,
     }
   }
 

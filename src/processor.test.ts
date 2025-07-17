@@ -29,7 +29,9 @@ test('LifelogProcessor - should process new starred lifelogs', async () => {
   expect(result.fetched).toBe(2)
   expect(result.processed).toBe(2)
   expect(result.skipped).toBe(0)
+  expect(result.failed).toBe(0)
   expect(result.newLifelogs).toHaveLength(2)
+  expect(result.errors).toHaveLength(0)
 
   // Verify lifelogs were marked as processed
   const stats = processor.getStats()
@@ -140,7 +142,9 @@ test('LifelogProcessor - should handle empty results', async () => {
   expect(result.fetched).toBe(0)
   expect(result.processed).toBe(0)
   expect(result.skipped).toBe(0)
+  expect(result.failed).toBe(0)
   expect(result.newLifelogs).toHaveLength(0)
+  expect(result.errors).toHaveLength(0)
 
   const stats = processor.getStats()
   expect(stats.totalProcessed).toBe(0)

@@ -1,12 +1,20 @@
 import { Database } from 'bun:sqlite'
+import { DatabaseError } from './errors'
 import type { Lifelog } from './schemas'
 
 export class LifelogDatabase {
   private db: Database
 
   constructor(dbPath: string = 'lifelogs.db') {
-    this.db = new Database(dbPath)
-    this.initializeSchema()
+    try {
+      this.db = new Database(dbPath)
+      this.initializeSchema()
+    } catch (error) {
+      throw new DatabaseError(
+        `Failed to initialize database at ${dbPath}`,
+        error as Error,
+      )
+    }
   }
 
   private initializeSchema(): void {
@@ -33,25 +41,39 @@ export class LifelogDatabase {
   }
 
   isProcessed(lifelogId: string): boolean {
-    const stmt = this.db.prepare(
-      'SELECT 1 FROM processed_lifelogs WHERE id = ?',
-    )
-    return stmt.get(lifelogId) !== null
+    try {
+      const stmt = this.db.prepare(
+        'SELECT 1 FROM processed_lifelogs WHERE id = ?',
+      )
+      return stmt.get(lifelogId) !== null
+    } catch (error) {
+      throw new DatabaseError(
+        `Failed to check if lifelog ${lifelogId} is processed`,
+        error as Error,
+      )
+    }
   }
 
   markAsProcessed(lifelog: Lifelog): void {
-    const stmt = this.db.prepare(`
-      INSERT INTO processed_lifelogs (id, title, updated_at, start_time, end_time)
-      VALUES (?, ?, ?, ?, ?)
-    `)
+    try {
+      const stmt = this.db.prepare(`
+        INSERT INTO processed_lifelogs (id, title, updated_at, start_time, end_time)
+        VALUES (?, ?, ?, ?, ?)
+      `)
 
-    stmt.run(
-      lifelog.id,
-      lifelog.title,
-      lifelog.updatedAt,
-      lifelog.startTime,
-      lifelog.endTime,
-    )
+      stmt.run(
+        lifelog.id,
+        lifelog.title,
+        lifelog.updatedAt,
+        lifelog.startTime,
+        lifelog.endTime,
+      )
+    } catch (error) {
+      throw new DatabaseError(
+        `Failed to mark lifelog ${lifelog.id} as processed`,
+        error as Error,
+      )
+    }
   }
 
   getProcessedCount(): number {

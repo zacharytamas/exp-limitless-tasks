@@ -1,4 +1,5 @@
 import { env } from './env'
+import { LimitlessApiError, ValidationError } from './errors'
 import { type LifelogsResponse, LifelogsResponseSchema } from './schemas'
 
 const BASE_URL = 'https://api.limitless.ai'
@@ -33,8 +34,11 @@ export class LimitlessApiClient {
     })
 
     if (!response.ok) {
-      throw new Error(
+      const responseText = await response.text()
+      throw new LimitlessApiError(
         `API request failed: ${response.status} ${response.statusText}`,
+        response.status,
+        responseText,
       )
     }
 
@@ -70,7 +74,17 @@ export class LimitlessApiClient {
       })
     }
 
-    const rawResponse = await this.request('/v1/lifelogs', queryParams)
-    return LifelogsResponseSchema.parse(rawResponse)
+    try {
+      const rawResponse = await this.request('/v1/lifelogs', queryParams)
+      return LifelogsResponseSchema.parse(rawResponse)
+    } catch (error) {
+      if (error instanceof LimitlessApiError) {
+        throw error
+      }
+      if (error instanceof Error && error.name === 'ZodError') {
+        throw new ValidationError('API response validation failed', error)
+      }
+      throw error
+    }
   }
 }
