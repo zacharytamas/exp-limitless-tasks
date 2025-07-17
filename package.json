@@ -1,0 +1,14 @@
+{
+  "name": "exp-limitless-tasks",
+  "module": "src/index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "zod": "^4.0.5"
+  }
+}
