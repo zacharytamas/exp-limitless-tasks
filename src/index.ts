@@ -1,6 +1,6 @@
-import { LimitlessApiClient } from './api'
-import { ProcessingError } from './errors'
-import { LifelogProcessor } from './processor'
+import { LimitlessApiClient } from './limitless/api'
+import { ProcessingError } from './limitless/errors'
+import { LifelogProcessor } from './limitless/processor'
 
 async function main() {
   console.log('🚀 Starting Limitless AI lifelogs processor...')

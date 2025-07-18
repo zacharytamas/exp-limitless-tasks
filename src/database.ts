@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite'
-import { DatabaseError } from './errors'
-import type { Lifelog } from './schemas'
+import { DatabaseError } from './limitless/errors'
+import type { Lifelog } from './limitless/schemas'
 
 export class LifelogDatabase {
   private db: Database

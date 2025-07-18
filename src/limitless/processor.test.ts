@@ -1,6 +1,10 @@
 import { beforeEach, expect, test } from 'bun:test'
+import {
+  createMockLifelog,
+  createMockLifelogsResponse,
+  MockLimitlessApiClient,
+} from '../test-utils'
 import { LifelogProcessor } from './processor'
-import { createMockLifelog, createMockLifelogsResponse, MockLimitlessApiClient } from './test-utils'
 
 let mockClient: MockLimitlessApiClient
 let processor: LifelogProcessor

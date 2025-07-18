@@ -1,4 +1,4 @@
-import { env } from './env'
+import { env } from '../env'
 import { LimitlessApiError, ValidationError } from './errors'
 import { type LifelogsResponse, LifelogsResponseSchema } from './schemas'
 
