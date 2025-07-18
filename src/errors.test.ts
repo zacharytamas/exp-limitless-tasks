@@ -1,10 +1,5 @@
 import { expect, test } from 'bun:test'
-import {
-  DatabaseError,
-  LimitlessApiError,
-  ProcessingError,
-  ValidationError,
-} from './errors'
+import { DatabaseError, LimitlessApiError, ProcessingError, ValidationError } from './errors'
 
 test('LimitlessApiError - should create error with status code and response', () => {
   const error = new LimitlessApiError(
@@ -36,10 +31,7 @@ test('ValidationError - should create error with validation details', () => {
     received: 'number',
   }
 
-  const error = new ValidationError(
-    'Validation failed for email field',
-    validationDetails,
-  )
+  const error = new ValidationError('Validation failed for email field', validationDetails)
 
   expect(error.name).toBe('ValidationError')
   expect(error.message).toBe('Validation failed for email field')
@@ -75,11 +67,7 @@ test('DatabaseError - should work without cause', () => {
 
 test('ProcessingError - should create error with lifelog ID and cause', () => {
   const causeError = new Error('Network timeout')
-  const error = new ProcessingError(
-    'Failed to process lifelog',
-    'lifelog-123',
-    causeError,
-  )
+  const error = new ProcessingError('Failed to process lifelog', 'lifelog-123', causeError)
 
   expect(error.name).toBe('ProcessingError')
   expect(error.message).toBe('Failed to process lifelog')

@@ -10,10 +10,7 @@ export class LifelogDatabase {
       this.db = new Database(dbPath)
       this.initializeSchema()
     } catch (error) {
-      throw new DatabaseError(
-        `Failed to initialize database at ${dbPath}`,
-        error as Error,
-      )
+      throw new DatabaseError(`Failed to initialize database at ${dbPath}`, error as Error)
     }
   }
 
@@ -42,9 +39,7 @@ export class LifelogDatabase {
 
   isProcessed(lifelogId: string): boolean {
     try {
-      const stmt = this.db.prepare(
-        'SELECT 1 FROM processed_lifelogs WHERE id = ?',
-      )
+      const stmt = this.db.prepare('SELECT 1 FROM processed_lifelogs WHERE id = ?')
       return stmt.get(lifelogId) !== null
     } catch (error) {
       throw new DatabaseError(
@@ -61,25 +56,14 @@ export class LifelogDatabase {
         VALUES (?, ?, ?, ?, ?)
       `)
 
-      stmt.run(
-        lifelog.id,
-        lifelog.title,
-        lifelog.updatedAt,
-        lifelog.startTime,
-        lifelog.endTime,
-      )
+      stmt.run(lifelog.id, lifelog.title, lifelog.updatedAt, lifelog.startTime, lifelog.endTime)
     } catch (error) {
-      throw new DatabaseError(
-        `Failed to mark lifelog ${lifelog.id} as processed`,
-        error as Error,
-      )
+      throw new DatabaseError(`Failed to mark lifelog ${lifelog.id} as processed`, error as Error)
     }
   }
 
   getProcessedCount(): number {
-    const stmt = this.db.prepare(
-      'SELECT COUNT(*) as count FROM processed_lifelogs',
-    )
+    const stmt = this.db.prepare('SELECT COUNT(*) as count FROM processed_lifelogs')
     const result = stmt.get() as { count: number }
     return result.count
   }

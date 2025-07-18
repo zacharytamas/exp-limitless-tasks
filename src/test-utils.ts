@@ -1,9 +1,7 @@
 import type { LimitlessApiClient } from './api'
 import type { Lifelog, LifelogsResponse } from './schemas'
 
-export class MockLimitlessApiClient
-  implements Pick<LimitlessApiClient, 'getLifelogs'>
-{
+export class MockLimitlessApiClient implements Pick<LimitlessApiClient, 'getLifelogs'> {
   private responses: LifelogsResponse[] = []
   private currentResponseIndex = 0
   private callHistory: Array<{

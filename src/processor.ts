@@ -28,18 +28,10 @@ export class LifelogProcessor {
       allLifelogs = await this.service.fetchAllLifelogs()
     } catch (error) {
       if (error instanceof LimitlessApiError) {
-        throw new ProcessingError(
-          'Failed to fetch lifelogs from API',
-          undefined,
-          error,
-        )
+        throw new ProcessingError('Failed to fetch starred lifelogs from API', undefined, error)
       }
       if (error instanceof ValidationError) {
-        throw new ProcessingError(
-          'API response validation failed',
-          undefined,
-          error,
-        )
+        throw new ProcessingError('API response validation failed', undefined, error)
       }
       throw error
     }

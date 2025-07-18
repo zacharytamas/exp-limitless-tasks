@@ -14,10 +14,7 @@ export class LimitlessApiClient {
     this.apiKey = apiKey ?? env.LIMITLESS_API_KEY
   }
 
-  private async request(
-    endpoint: string,
-    params?: Record<string, string>,
-  ): Promise<unknown> {
+  private async request(endpoint: string, params?: Record<string, string>): Promise<unknown> {
     const url = new URL(`${BASE_URL}${endpoint}`)
 
     if (params) {

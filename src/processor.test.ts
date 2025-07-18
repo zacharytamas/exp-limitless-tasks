@@ -1,10 +1,6 @@
 import { beforeEach, expect, test } from 'bun:test'
 import { LifelogProcessor } from './processor'
-import {
-  createMockLifelog,
-  createMockLifelogsResponse,
-  MockLimitlessApiClient,
-} from './test-utils'
+import { createMockLifelog, createMockLifelogsResponse, MockLimitlessApiClient } from './test-utils'
 
 let mockClient: MockLimitlessApiClient
 let processor: LifelogProcessor
@@ -108,15 +104,10 @@ test('LifelogProcessor - should handle pagination', async () => {
     createMockLifelog({ id: 'lifelog-1', title: 'Page 1 - Lifelog 1' }),
     createMockLifelog({ id: 'lifelog-2', title: 'Page 1 - Lifelog 2' }),
   ]
-  const page1Response = createMockLifelogsResponse(
-    page1Lifelogs,
-    'cursor-page-2',
-  )
+  const page1Response = createMockLifelogsResponse(page1Lifelogs, 'cursor-page-2')
 
   // Page 2
-  const page2Lifelogs = [
-    createMockLifelog({ id: 'lifelog-3', title: 'Page 2 - Lifelog 1' }),
-  ]
+  const page2Lifelogs = [createMockLifelog({ id: 'lifelog-3', title: 'Page 2 - Lifelog 1' })]
   const page2Response = createMockLifelogsResponse(page2Lifelogs)
 
   mockClient.addResponse(page1Response)
