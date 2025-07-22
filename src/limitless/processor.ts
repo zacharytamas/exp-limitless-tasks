@@ -52,8 +52,6 @@ export class LifelogProcessor {
           continue
         }
 
-        console.log(`Processing new lifelog: ${lifelog.title}`)
-
         await this.processLifelog(lifelog)
         this.database.markAsProcessed(lifelog)
         newLifelogs.push(lifelog)
@@ -81,11 +79,6 @@ export class LifelogProcessor {
   }
 
   private async processLifelog(lifelog: Lifelog): Promise<void> {
-    console.log(`Processing lifelog "${lifelog.title}" (${lifelog.id})`)
-    console.log(`  Start: ${lifelog.startTime}`)
-    console.log(`  End: ${lifelog.endTime}`)
-    console.log(`  Content nodes: ${lifelog.contents.length}`)
-
     // TODO: Find the content nodes that are relevant to the user's request.
     // TODO: Determine initial supported actions:
     //       - "I drank 12oz of water
