@@ -4,6 +4,29 @@ import { type LifelogsResponse, LifelogsResponseSchema } from './schemas'
 
 const BASE_URL = 'https://api.limitless.ai'
 
+export interface GetLifelogsParams {
+  /** Timezone for date filtering */
+  timezone?: string
+  /** Specific date to filter by (YYYY-MM-DD format) */
+  date?: string
+  /** Start date/time for filtering */
+  start?: string
+  /** End date/time for filtering */
+  end?: string
+  /** Pagination cursor for fetching next page */
+  cursor?: string
+  /** Sort direction for results */
+  direction?: 'asc' | 'desc'
+  /** Whether to include markdown content in response */
+  includeMarkdown?: boolean
+  /** Whether to include headings in response */
+  includeHeadings?: boolean
+  /** Maximum number of items per request */
+  limit?: number
+  /** Filter by starred status */
+  isStarred?: boolean
+}
+
 /**
  * Client for interacting with the Limitless AI API.
  */
@@ -49,18 +72,7 @@ export class LimitlessApiClient {
    * @returns {Promise<LifelogsResponse>} A promise that resolves to the lifelogs response.
    * @throws {Error} If the API request fails or the response is invalid.
    */
-  async getLifelogs(params?: {
-    timezone?: string
-    date?: string
-    start?: string
-    end?: string
-    cursor?: string
-    direction?: 'asc' | 'desc'
-    includeMarkdown?: boolean
-    includeHeadings?: boolean
-    limit?: number
-    isStarred?: boolean
-  }): Promise<LifelogsResponse> {
+  async getLifelogs(params?: GetLifelogsParams): Promise<LifelogsResponse> {
     const queryParams: Record<string, string> = {}
 
     if (params) {

@@ -1,5 +1,10 @@
-import type { LimitlessApiClient } from './api'
+import type { GetLifelogsParams, LimitlessApiClient } from './api'
 import type { Lifelog } from './schemas'
+
+export interface FetchLifelogsOptions extends GetLifelogsParams {
+  /** Maximum number of API requests to make (default: 20) */
+  maxRequests?: number
+}
 
 export class LifelogService {
   private client: LimitlessApiClient
@@ -8,19 +13,37 @@ export class LifelogService {
     this.client = client
   }
 
-  async fetchAllLifelogs(): Promise<Lifelog[]> {
+  async fetchAllLifelogs(options: FetchLifelogsOptions = {}): Promise<Lifelog[]> {
+    const {
+      maxRequests = 20,
+      limit = 50,
+      includeMarkdown = true,
+      includeHeadings = true,
+      direction = 'desc',
+      ...apiParams
+    } = options
+
     const allLifelogs: Lifelog[] = []
     let cursor: string | undefined
+    let requestCount = 0
 
     do {
+      if (requestCount >= maxRequests) {
+        break
+      }
+
       const response = await this.client.getLifelogs({
+        ...apiParams,
         cursor: cursor || undefined,
-        includeMarkdown: true,
-        includeHeadings: true,
+        includeMarkdown,
+        includeHeadings,
+        direction,
+        limit,
       })
 
       allLifelogs.push(...response.data.lifelogs)
       cursor = response.meta.lifelogs.nextCursor
+      requestCount++
     } while (cursor)
 
     return allLifelogs

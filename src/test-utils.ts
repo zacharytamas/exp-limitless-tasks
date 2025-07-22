@@ -1,5 +1,5 @@
-import type { LimitlessApiClient } from './api'
-import type { Lifelog, LifelogsResponse } from './schemas'
+import type { LimitlessApiClient } from './limitless/api'
+import type { Lifelog, LifelogsResponse } from './limitless/schemas'
 
 export class MockLimitlessApiClient implements Pick<LimitlessApiClient, 'getLifelogs'> {
   private responses: LifelogsResponse[] = []
