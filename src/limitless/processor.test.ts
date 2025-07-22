@@ -1,19 +1,18 @@
-import { beforeEach, expect, test } from 'bun:test'
-import {
-  createMockLifelog,
-  createMockLifelogsResponse,
-  MockLimitlessApiClient,
-} from '../test-utils'
+import { expect, test } from 'bun:test'
+import { ConfigProvider, Effect } from 'effect'
+
+import { LifelogDatabase } from '../database'
+import { createMockLifelog, createMockLifelogsResponse, mockLimitlessAIApi } from '../test-utils'
+import { LimitlessAIApi } from './api'
+import { LifelogsService } from './lifelogs'
 import { LifelogProcessor } from './processor'
 
-let mockClient: MockLimitlessApiClient
-let processor: LifelogProcessor
-
-beforeEach(() => {
-  mockClient = new MockLimitlessApiClient()
-  // Use in-memory database for each test
-  processor = new LifelogProcessor(mockClient as any, ':memory:')
-})
+const config = ConfigProvider.fromMap(
+  new Map([
+    ['DATABASE_PATH', ':memory:'],
+    ['LIMITLESS_API_KEY', 'test-api-key'],
+  ]),
+)
 
 test('LifelogProcessor - should process new lifelogs', async () => {
   const mockLifelogs = [
@@ -22,84 +21,119 @@ test('LifelogProcessor - should process new lifelogs', async () => {
   ]
 
   const mockResponse = createMockLifelogsResponse(mockLifelogs)
+  const mockClient = mockLimitlessAIApi()
   mockClient.addResponse(mockResponse)
 
-  const result = await processor.processAllLifelogs()
+  await Effect.runPromise(
+    Effect.withConfigProvider(
+      Effect.gen(function* () {
+        const processor = yield* LifelogProcessor
+        const result = yield* Effect.promise(() => processor.processAllLifelogs())
 
-  expect(result.fetched).toBe(2)
-  expect(result.processed).toBe(2)
-  expect(result.skipped).toBe(0)
-  expect(result.failed).toBe(0)
-  expect(result.newLifelogs).toHaveLength(2)
-  expect(result.errors).toHaveLength(0)
+        expect(result.fetched).toBe(2)
+        expect(result.processed).toBe(2)
+        expect(result.skipped).toBe(0)
+        expect(result.failed).toBe(0)
+        expect(result.newLifelogs).toHaveLength(2)
+        expect(result.errors).toHaveLength(0)
 
-  // Verify lifelogs were marked as processed
-  const stats = processor.getStats()
-  expect(stats.totalProcessed).toBe(2)
-  expect(stats.lastProcessedTime).not.toBeNull()
+        // Verify lifelogs were marked as processed
+        const stats = processor.getStats()
+        expect(stats.totalProcessed).toBe(2)
+        expect(stats.lastProcessedTime).not.toBeNull()
+      }).pipe(
+        Effect.provide(LifelogProcessor.DefaultWithoutDependencies),
+        Effect.provide(LifelogsService.DefaultWithoutDependencies),
+        Effect.provideService(LimitlessAIApi, mockClient.mock),
+        Effect.provide(LifelogDatabase.Default),
+      ),
+      config,
+    ),
+  )
 })
 
 test('LifelogProcessor - should skip already processed lifelogs', async () => {
-  const lifelog1 = createMockLifelog({
-    id: 'lifelog-1',
-    title: 'First Lifelog',
-  })
-  const lifelog2 = createMockLifelog({
-    id: 'lifelog-2',
-    title: 'Second Lifelog',
-  })
+  const lifelog1 = createMockLifelog({ id: 'lifelog-1', title: 'First Lifelog' })
+  const lifelog2 = createMockLifelog({ id: 'lifelog-2', title: 'Second Lifelog' })
   const mockLifelogs = [lifelog1, lifelog2]
+  const mockClient = mockLimitlessAIApi()
 
-  // First run - process both lifelogs
-  const firstResponse = createMockLifelogsResponse(mockLifelogs)
-  mockClient.addResponse(firstResponse)
+  await Effect.runPromise(
+    Effect.withConfigProvider(
+      Effect.gen(function* () {
+        const processor = yield* LifelogProcessor
 
-  const firstResult = await processor.processAllLifelogs()
-  expect(firstResult.processed).toBe(2)
-  expect(firstResult.skipped).toBe(0)
+        // First run - process both lifelogs
+        const firstResponse = createMockLifelogsResponse(mockLifelogs)
+        mockClient.addResponse(firstResponse)
 
-  // Second run - same lifelogs should be skipped
-  mockClient.reset()
-  const secondResponse = createMockLifelogsResponse(mockLifelogs)
-  mockClient.addResponse(secondResponse)
+        const firstResult = yield* Effect.promise(() => processor.processAllLifelogs())
+        expect(firstResult.processed).toBe(2)
+        expect(firstResult.skipped).toBe(0)
 
-  const secondResult = await processor.processAllLifelogs()
-  expect(secondResult.fetched).toBe(2)
-  expect(secondResult.processed).toBe(0)
-  expect(secondResult.skipped).toBe(2)
-  expect(secondResult.newLifelogs).toHaveLength(0)
+        // Second run - same lifelogs should be skipped
+        mockClient.reset()
+        const secondResponse = createMockLifelogsResponse(mockLifelogs)
+        mockClient.addResponse(secondResponse)
 
-  // Total processed count should remain 2
-  const stats = processor.getStats()
-  expect(stats.totalProcessed).toBe(2)
+        const secondResult = yield* Effect.promise(() => processor.processAllLifelogs())
+        expect(secondResult.fetched).toBe(2)
+        expect(secondResult.processed).toBe(0)
+        expect(secondResult.skipped).toBe(2)
+        expect(secondResult.newLifelogs).toHaveLength(0)
+
+        // Total processed count should remain 2
+        const stats = processor.getStats()
+        expect(stats.totalProcessed).toBe(2)
+      }).pipe(
+        Effect.provide(LifelogProcessor.DefaultWithoutDependencies),
+        Effect.provide(LifelogsService.DefaultWithoutDependencies),
+        Effect.provideService(LimitlessAIApi, mockClient.mock),
+        Effect.provide(LifelogDatabase.Default),
+      ),
+      config,
+    ),
+  )
 })
 
 test('LifelogProcessor - should handle mixed new and processed lifelogs', async () => {
-  const lifelog1 = createMockLifelog({
-    id: 'mixed-1',
-    title: 'Already Processed',
-  })
+  const lifelog1 = createMockLifelog({ id: 'mixed-1', title: 'Already Processed' })
   const lifelog2 = createMockLifelog({ id: 'mixed-2', title: 'New Lifelog' })
+  const mockClient = mockLimitlessAIApi()
 
-  // First run - process lifelog1
-  const firstResponse = createMockLifelogsResponse([lifelog1])
-  mockClient.addResponse(firstResponse)
-  await processor.processAllLifelogs()
+  await Effect.runPromise(
+    Effect.withConfigProvider(
+      Effect.gen(function* () {
+        const processor = yield* LifelogProcessor
 
-  // Second run - lifelog1 (processed) + lifelog2 (new)
-  mockClient.reset()
-  const secondResponse = createMockLifelogsResponse([lifelog1, lifelog2])
-  mockClient.addResponse(secondResponse)
+        // First run - process lifelog1
+        const firstResponse = createMockLifelogsResponse([lifelog1])
+        mockClient.addResponse(firstResponse)
+        yield* Effect.promise(() => processor.processAllLifelogs())
 
-  const result = await processor.processAllLifelogs()
-  expect(result.fetched).toBe(2)
-  expect(result.processed).toBe(1)
-  expect(result.skipped).toBe(1)
-  expect(result.newLifelogs).toHaveLength(1)
-  expect(result.newLifelogs[0]?.id).toBe('mixed-2')
+        // Second run - lifelog1 (processed) + lifelog2 (new)
+        mockClient.reset()
+        const secondResponse = createMockLifelogsResponse([lifelog1, lifelog2])
+        mockClient.addResponse(secondResponse)
 
-  const stats = processor.getStats()
-  expect(stats.totalProcessed).toBe(2)
+        const result = yield* Effect.promise(() => processor.processAllLifelogs())
+        expect(result.fetched).toBe(2)
+        expect(result.processed).toBe(1)
+        expect(result.skipped).toBe(1)
+        expect(result.newLifelogs).toHaveLength(1)
+        expect(result.newLifelogs[0]?.id).toBe('mixed-2')
+
+        const stats = processor.getStats()
+        expect(stats.totalProcessed).toBe(2)
+      }).pipe(
+        Effect.provide(LifelogProcessor.DefaultWithoutDependencies),
+        Effect.provide(LifelogsService.DefaultWithoutDependencies),
+        Effect.provideService(LimitlessAIApi, mockClient.mock),
+        Effect.provide(LifelogDatabase.Default),
+      ),
+      config,
+    ),
+  )
 })
 
 test('LifelogProcessor - should handle pagination', async () => {
@@ -114,74 +148,149 @@ test('LifelogProcessor - should handle pagination', async () => {
   const page2Lifelogs = [createMockLifelog({ id: 'lifelog-3', title: 'Page 2 - Lifelog 1' })]
   const page2Response = createMockLifelogsResponse(page2Lifelogs)
 
+  const mockClient = mockLimitlessAIApi()
   mockClient.addResponse(page1Response)
   mockClient.addResponse(page2Response)
 
-  const result = await processor.processAllLifelogs()
+  await Effect.runPromise(
+    Effect.withConfigProvider(
+      Effect.gen(function* () {
+        const processor = yield* LifelogProcessor
+        const result = yield* Effect.promise(() => processor.processAllLifelogs())
 
-  expect(result.fetched).toBe(3)
-  expect(result.processed).toBe(3)
-  expect(result.skipped).toBe(0)
-  expect(result.newLifelogs).toHaveLength(3)
+        expect(result.fetched).toBe(3)
+        expect(result.processed).toBe(3)
+        expect(result.skipped).toBe(0)
+        expect(result.newLifelogs).toHaveLength(3)
 
-  // Verify all API calls were made
-  expect(mockClient.getCallCount()).toBe(2)
+        // Verify all API calls were made
+        expect(mockClient.getCallCount()).toBe(2)
+      }).pipe(
+        Effect.provide(LifelogProcessor.DefaultWithoutDependencies),
+        Effect.provide(LifelogsService.DefaultWithoutDependencies),
+        Effect.provideService(LimitlessAIApi, mockClient.mock),
+        Effect.provide(LifelogDatabase.Default),
+      ),
+      config,
+    ),
+  )
 })
 
 test('LifelogProcessor - should handle empty results', async () => {
   const emptyResponse = createMockLifelogsResponse([])
+  const mockClient = mockLimitlessAIApi()
   mockClient.addResponse(emptyResponse)
 
-  const result = await processor.processAllLifelogs()
+  await Effect.runPromise(
+    Effect.withConfigProvider(
+      Effect.gen(function* () {
+        const processor = yield* LifelogProcessor
+        const result = yield* Effect.promise(() => processor.processAllLifelogs())
 
-  expect(result.fetched).toBe(0)
-  expect(result.processed).toBe(0)
-  expect(result.skipped).toBe(0)
-  expect(result.failed).toBe(0)
-  expect(result.newLifelogs).toHaveLength(0)
-  expect(result.errors).toHaveLength(0)
+        expect(result.fetched).toBe(0)
+        expect(result.processed).toBe(0)
+        expect(result.skipped).toBe(0)
+        expect(result.failed).toBe(0)
+        expect(result.newLifelogs).toHaveLength(0)
+        expect(result.errors).toHaveLength(0)
 
-  const stats = processor.getStats()
-  expect(stats.totalProcessed).toBe(0)
-  expect(stats.lastProcessedTime).toBeNull()
+        const stats = processor.getStats()
+        expect(stats.totalProcessed).toBe(0)
+        expect(stats.lastProcessedTime).toBeNull()
+      }).pipe(
+        Effect.provide(LifelogProcessor.DefaultWithoutDependencies),
+        Effect.provide(LifelogsService.DefaultWithoutDependencies),
+        Effect.provideService(LimitlessAIApi, mockClient.mock),
+        Effect.provide(LifelogDatabase.Default),
+      ),
+      config,
+    ),
+  )
 })
 
 test('LifelogProcessor - should handle API errors gracefully', async () => {
   // Don't add any responses, so mock client will throw error
 
-  expect(processor.processAllLifelogs()).rejects.toThrow(
-    'Mock client: No more responses configured',
-  )
+  const mockClient = mockLimitlessAIApi()
+
+  expect(
+    Effect.runPromise(
+      Effect.withConfigProvider(
+        Effect.gen(function* () {
+          const processor = yield* LifelogProcessor
+          yield* Effect.promise(() => processor.processAllLifelogs())
+        }).pipe(
+          Effect.provide(LifelogProcessor.DefaultWithoutDependencies),
+          Effect.provide(LifelogsService.DefaultWithoutDependencies),
+          Effect.provideService(LimitlessAIApi, mockClient.mock),
+          Effect.provide(LifelogDatabase.Default),
+        ),
+        config,
+      ),
+    ),
+  ).rejects.toThrow('Mock client: No more responses configured')
 })
 
 test('LifelogProcessor - should provide accurate statistics', async () => {
-  // Initial stats
-  let stats = processor.getStats()
-  expect(stats.totalProcessed).toBe(0)
-  expect(stats.lastProcessedTime).toBeNull()
+  const mockClient = mockLimitlessAIApi()
 
-  // Process some lifelogs
-  const mockLifelogs = [
-    createMockLifelog({ id: 'stats-1' }),
-    createMockLifelog({ id: 'stats-2' }),
-    createMockLifelog({ id: 'stats-3' }),
-  ]
+  await Effect.runPromise(
+    Effect.withConfigProvider(
+      Effect.gen(function* () {
+        const processor = yield* LifelogProcessor
 
-  const mockResponse = createMockLifelogsResponse(mockLifelogs)
-  mockClient.addResponse(mockResponse)
+        // Initial stats
+        let stats = processor.getStats()
+        expect(stats.totalProcessed).toBe(0)
+        expect(stats.lastProcessedTime).toBeNull()
 
-  await processor.processAllLifelogs()
+        // Process some lifelogs
+        const mockLifelogs = [
+          createMockLifelog({ id: 'stats-1' }),
+          createMockLifelog({ id: 'stats-2' }),
+          createMockLifelog({ id: 'stats-3' }),
+        ]
 
-  // Updated stats
-  stats = processor.getStats()
-  expect(stats.totalProcessed).toBe(3)
-  expect(stats.lastProcessedTime).not.toBeNull()
+        const mockResponse = createMockLifelogsResponse(mockLifelogs)
+        mockClient.addResponse(mockResponse)
+
+        yield* Effect.promise(() => processor.processAllLifelogs())
+
+        // Updated stats
+        stats = processor.getStats()
+        expect(stats.totalProcessed).toBe(3)
+        expect(stats.lastProcessedTime).not.toBeNull()
+      }).pipe(
+        Effect.provide(LifelogProcessor.DefaultWithoutDependencies),
+        Effect.provide(LifelogsService.DefaultWithoutDependencies),
+        Effect.provideService(LimitlessAIApi, mockClient.mock),
+        Effect.provide(LifelogDatabase.Default),
+      ),
+      config,
+    ),
+  )
 })
 
-test('LifelogProcessor - should close database properly', () => {
-  // Should not throw when closing
-  expect(() => processor.close()).not.toThrow()
+test('LifelogProcessor - should close database properly', async () => {
+  const mockClient = mockLimitlessAIApi()
 
-  // After closing, operations should fail
-  expect(() => processor.getStats()).toThrow()
+  await Effect.runPromise(
+    Effect.withConfigProvider(
+      Effect.gen(function* () {
+        const processor = yield* LifelogProcessor
+
+        // Should not throw when closing
+        expect(() => processor.close()).not.toThrow()
+
+        // After closing, operations should fail
+        expect(() => processor.getStats()).toThrow()
+      }).pipe(
+        Effect.provide(LifelogProcessor.DefaultWithoutDependencies),
+        Effect.provide(LifelogsService.DefaultWithoutDependencies),
+        Effect.provideService(LimitlessAIApi, mockClient.mock),
+        Effect.provide(LifelogDatabase.Default),
+      ),
+      config,
+    ),
+  )
 })

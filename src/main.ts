@@ -1,16 +1,16 @@
-import { LimitlessApiClient } from './limitless/api'
+import { Effect } from 'effect'
+
 import { ProcessingError } from './limitless/errors'
 import { LifelogProcessor } from './limitless/processor'
 
-async function main() {
+const program = Effect.gen(function* () {
   console.log('🚀 Starting Limitless AI lifelog processor...')
 
-  const client = new LimitlessApiClient()
-  const processor = new LifelogProcessor(client)
+  const processor = yield* LifelogProcessor
 
   try {
     const startTime = Date.now()
-    const result = await processor.processAllLifelogs()
+    const result = yield* Effect.promise(() => processor.processAllLifelogs())
     const endTime = Date.now()
     const duration = ((endTime - startTime) / 1000).toFixed(2)
 
@@ -58,11 +58,11 @@ async function main() {
   }
 
   console.log('\n🎉 Processing complete!')
-}
+})
 
 // Only run if this file was executed directly
 if (import.meta.main) {
-  main().catch((error) => {
+  Effect.runPromise(program.pipe(Effect.provide(LifelogProcessor.Default))).catch((error) => {
     console.error('Unhandled error:', error)
     process.exit(1)
   })

@@ -1,56 +1,51 @@
-import type { LimitlessApiClient } from './limitless/api'
+import { type GetLifelogsParams, LimitlessAIApi } from './limitless/api'
 import type { Lifelog, LifelogsResponse } from './limitless/schemas'
 
-export class MockLimitlessApiClient implements Pick<LimitlessApiClient, 'getLifelogs'> {
-  private responses: LifelogsResponse[] = []
-  private currentResponseIndex = 0
-  private callHistory: Array<{
-    params?: Parameters<LimitlessApiClient['getLifelogs']>[0]
+export const mockLimitlessAIApi = () => {
+  let callHistory: Array<{
+    params?: GetLifelogsParams
     timestamp: number
   }> = []
+  let responses: LifelogsResponse[] = []
+  let currentResponseIndex = 0
 
-  constructor(responses: LifelogsResponse[] = []) {
-    this.responses = responses
-  }
+  const mock = new LimitlessAIApi({
+    async getLifelogs(params?: GetLifelogsParams): Promise<LifelogsResponse> {
+      callHistory.push({ params, timestamp: Date.now() })
 
-  async getLifelogs(
-    params?: Parameters<LimitlessApiClient['getLifelogs']>[0],
-  ): Promise<LifelogsResponse> {
-    this.callHistory.push({
-      params,
-      timestamp: Date.now(),
-    })
+      if (currentResponseIndex >= responses.length) {
+        throw new Error('Mock client: No more responses configured')
+      }
 
-    if (this.currentResponseIndex >= this.responses.length) {
-      throw new Error('Mock client: No more responses configured')
-    }
+      const response = responses[currentResponseIndex]
+      currentResponseIndex++
 
-    const response = this.responses[this.currentResponseIndex]!
-    this.currentResponseIndex++
+      // Simulate network delay
+      await new Promise((resolve) => setTimeout(resolve, 0))
 
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 10))
+      return response
+    },
+  })
 
-    return response
-  }
+  return {
+    mock,
+    getCallHistory() {
+      return [...callHistory]
+    },
 
-  // Test utilities
-  getCallHistory() {
-    return [...this.callHistory]
-  }
+    getCallCount() {
+      return callHistory.length
+    },
 
-  getCallCount() {
-    return this.callHistory.length
-  }
+    reset() {
+      currentResponseIndex = 0
+      callHistory = []
+      responses = []
+    },
 
-  reset() {
-    this.currentResponseIndex = 0
-    this.callHistory = []
-    this.responses = []
-  }
-
-  addResponse(response: LifelogsResponse) {
-    this.responses.push(response)
+    addResponse(response: LifelogsResponse) {
+      responses.push(response)
+    },
   }
 }
 

@@ -1,8 +1,8 @@
-import { env } from '../env'
-import { LimitlessApiError, ValidationError } from './errors'
-import { type LifelogsResponse, LifelogsResponseSchema } from './schemas'
+import { Effect, Redacted } from 'effect'
 
-const BASE_URL = 'https://api.limitless.ai'
+import env from '../env'
+import { LimitlessApiError, ValidationError } from './errors'
+import { LifelogsResponseSchema } from './schemas'
 
 export interface GetLifelogsParams {
   /** Timezone for date filtering */
@@ -27,73 +27,72 @@ export interface GetLifelogsParams {
   isStarred?: boolean
 }
 
-/**
- * Client for interacting with the Limitless AI API.
- */
-export class LimitlessApiClient {
-  private readonly apiKey: string
+export class LimitlessAIApiConfig extends Effect.Service<LimitlessAIApiConfig>()(
+  'limitless/Config',
+  {
+    effect: Effect.gen(function* () {
+      const apiKey = yield* env.limitlessApiKey
+      const baseUrl = yield* env.limitlessApiBaseUrl
+      return { apiKey, baseUrl }
+    }),
+  },
+) {}
 
-  constructor(apiKey?: string) {
-    this.apiKey = apiKey ?? env.LIMITLESS_API_KEY
-  }
+export class LimitlessAIApi extends Effect.Service<LimitlessAIApi>()('limitless/ApiClient', {
+  effect: Effect.gen(function* () {
+    const config = yield* LimitlessAIApiConfig
 
-  private async request(endpoint: string, params?: Record<string, string>): Promise<unknown> {
-    const url = new URL(`${BASE_URL}${endpoint}`)
+    async function request(endpoint: string, params?: Record<string, string>): Promise<unknown> {
+      const url = new URL(`${config.baseUrl}${endpoint}`)
 
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        url.searchParams.set(key, value)
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          url.searchParams.set(key, value)
+        })
+      }
+
+      const response = await fetch(url.toString(), {
+        headers: { 'X-API-Key': Redacted.value(config.apiKey), 'Content-Type': 'application/json' },
       })
+
+      if (!response.ok) {
+        const responseText = await response.text()
+        throw new LimitlessApiError(
+          `API request failed: ${response.status} ${response.statusText}`,
+          response.status,
+          responseText,
+        )
+      }
+
+      return response.json()
     }
 
-    const response = await fetch(url.toString(), {
-      headers: {
-        'X-API-Key': this.apiKey,
-        'Content-Type': 'application/json',
-      },
-    })
+    return {
+      async getLifelogs(params?: GetLifelogsParams) {
+        const queryParams: Record<string, string> = {}
 
-    if (!response.ok) {
-      const responseText = await response.text()
-      throw new LimitlessApiError(
-        `API request failed: ${response.status} ${response.statusText}`,
-        response.status,
-        responseText,
-      )
-    }
-
-    return response.json()
-  }
-
-  /**
-   * Fetches lifelogs from the Limitless AI API.
-   *
-   * @param params - Optional parameters for filtering the lifelogs.
-   * @returns {Promise<LifelogsResponse>} A promise that resolves to the lifelogs response.
-   * @throws {Error} If the API request fails or the response is invalid.
-   */
-  async getLifelogs(params?: GetLifelogsParams): Promise<LifelogsResponse> {
-    const queryParams: Record<string, string> = {}
-
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          queryParams[key] = String(value)
+        if (params) {
+          Object.entries(params).forEach(([key, value]) => {
+            if (value !== undefined) {
+              queryParams[key] = String(value)
+            }
+          })
         }
-      })
-    }
 
-    try {
-      const rawResponse = await this.request('/v1/lifelogs', queryParams)
-      return LifelogsResponseSchema.parse(rawResponse)
-    } catch (error) {
-      if (error instanceof LimitlessApiError) {
-        throw error
-      }
-      if (error instanceof Error && error.name === 'ZodError') {
-        throw new ValidationError('API response validation failed', error)
-      }
-      throw error
-    }
-  }
-}
+        try {
+          const rawResponse = await request('/v1/lifelogs', queryParams)
+          return LifelogsResponseSchema.parse(rawResponse)
+        } catch (error) {
+          if (error instanceof LimitlessApiError) {
+            throw error
+          }
+          if (error instanceof Error && error.name === 'ZodError') {
+            throw new ValidationError('API response validation failed', error)
+          }
+          throw error
+        }
+      },
+    } as const
+  }),
+  dependencies: [LimitlessAIApiConfig.Default],
+}) {}

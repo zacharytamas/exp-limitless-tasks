@@ -1,11 +1,9 @@
-import { z } from 'zod'
+import { Config } from 'effect'
 
-/**
- * Environment variables we support or require for the application to function properly.
- */
-const envSchema = z.object({
-  LIMITLESS_API_KEY: z.string().min(1, 'LIMITLESS_API_KEY is required'),
-})
-
-export const env = envSchema.parse(process.env)
-export type Env = z.infer<typeof envSchema>
+export default {
+  databasePath: Config.string('DATABASE_PATH').pipe(Config.withDefault('lifelogs.db')),
+  limitlessApiKey: Config.redacted('LIMITLESS_API_KEY'),
+  limitlessApiBaseUrl: Config.string('LIMITLESS_API_BASE_URL').pipe(
+    Config.withDefault('https://api.limitless.ai'),
+  ),
+}

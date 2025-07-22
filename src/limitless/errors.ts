@@ -1,3 +1,10 @@
+import { Data } from 'effect'
+
+export class LimitlessApiErrorEffect extends Data.TaggedError('LimitlessApiError')<{
+  status: number
+  statusText: string
+}> {}
+
 export class LimitlessApiError extends Error {
   constructor(
     message: string,
@@ -9,6 +16,8 @@ export class LimitlessApiError extends Error {
   }
 }
 
+export class ValidationErrorEffect extends Data.TaggedError('ValidationError') {}
+
 export class ValidationError extends Error {
   constructor(
     message: string,
@@ -19,6 +28,8 @@ export class ValidationError extends Error {
   }
 }
 
+export class DatabaseErrorEffect extends Data.TaggedError('DatabaseError')<{ cause?: Error }> {}
+
 export class DatabaseError extends Error {
   public override cause?: Error
 
@@ -28,6 +39,8 @@ export class DatabaseError extends Error {
     this.cause = cause
   }
 }
+
+export class ProcessingErrorEffect extends Data.TaggedError('ProcessingError') {}
 
 export class ProcessingError extends Error {
   public lifelogId?: string
