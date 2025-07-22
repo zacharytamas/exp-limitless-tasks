@@ -15,7 +15,7 @@ beforeEach(() => {
   processor = new LifelogProcessor(mockClient as any, ':memory:')
 })
 
-test('LifelogProcessor - should process new starred lifelogs', async () => {
+test('LifelogProcessor - should process new lifelogs', async () => {
   const mockLifelogs = [
     createMockLifelog({ id: 'lifelog-1', title: 'First Lifelog' }),
     createMockLifelog({ id: 'lifelog-2', title: 'Second Lifelog' }),
@@ -24,7 +24,7 @@ test('LifelogProcessor - should process new starred lifelogs', async () => {
   const mockResponse = createMockLifelogsResponse(mockLifelogs)
   mockClient.addResponse(mockResponse)
 
-  const result = await processor.processStarredLifelogs()
+  const result = await processor.processAllLifelogs()
 
   expect(result.fetched).toBe(2)
   expect(result.processed).toBe(2)
@@ -54,7 +54,7 @@ test('LifelogProcessor - should skip already processed lifelogs', async () => {
   const firstResponse = createMockLifelogsResponse(mockLifelogs)
   mockClient.addResponse(firstResponse)
 
-  const firstResult = await processor.processStarredLifelogs()
+  const firstResult = await processor.processAllLifelogs()
   expect(firstResult.processed).toBe(2)
   expect(firstResult.skipped).toBe(0)
 
@@ -63,7 +63,7 @@ test('LifelogProcessor - should skip already processed lifelogs', async () => {
   const secondResponse = createMockLifelogsResponse(mockLifelogs)
   mockClient.addResponse(secondResponse)
 
-  const secondResult = await processor.processStarredLifelogs()
+  const secondResult = await processor.processAllLifelogs()
   expect(secondResult.fetched).toBe(2)
   expect(secondResult.processed).toBe(0)
   expect(secondResult.skipped).toBe(2)
@@ -84,14 +84,14 @@ test('LifelogProcessor - should handle mixed new and processed lifelogs', async 
   // First run - process lifelog1
   const firstResponse = createMockLifelogsResponse([lifelog1])
   mockClient.addResponse(firstResponse)
-  await processor.processStarredLifelogs()
+  await processor.processAllLifelogs()
 
   // Second run - lifelog1 (processed) + lifelog2 (new)
   mockClient.reset()
   const secondResponse = createMockLifelogsResponse([lifelog1, lifelog2])
   mockClient.addResponse(secondResponse)
 
-  const result = await processor.processStarredLifelogs()
+  const result = await processor.processAllLifelogs()
   expect(result.fetched).toBe(2)
   expect(result.processed).toBe(1)
   expect(result.skipped).toBe(1)
@@ -122,7 +122,7 @@ test('LifelogProcessor - should handle pagination', async () => {
   mockClient.addResponse(page1Response)
   mockClient.addResponse(page2Response)
 
-  const result = await processor.processStarredLifelogs()
+  const result = await processor.processAllLifelogs()
 
   expect(result.fetched).toBe(3)
   expect(result.processed).toBe(3)
@@ -137,7 +137,7 @@ test('LifelogProcessor - should handle empty results', async () => {
   const emptyResponse = createMockLifelogsResponse([])
   mockClient.addResponse(emptyResponse)
 
-  const result = await processor.processStarredLifelogs()
+  const result = await processor.processAllLifelogs()
 
   expect(result.fetched).toBe(0)
   expect(result.processed).toBe(0)
@@ -154,7 +154,7 @@ test('LifelogProcessor - should handle empty results', async () => {
 test('LifelogProcessor - should handle API errors gracefully', async () => {
   // Don't add any responses, so mock client will throw error
 
-  expect(processor.processStarredLifelogs()).rejects.toThrow(
+  expect(processor.processAllLifelogs()).rejects.toThrow(
     'Mock client: No more responses configured',
   )
 })
@@ -175,7 +175,7 @@ test('LifelogProcessor - should provide accurate statistics', async () => {
   const mockResponse = createMockLifelogsResponse(mockLifelogs)
   mockClient.addResponse(mockResponse)
 
-  await processor.processStarredLifelogs()
+  await processor.processAllLifelogs()
 
   // Updated stats
   stats = processor.getStats()

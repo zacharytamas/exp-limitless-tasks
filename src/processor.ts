@@ -13,7 +13,7 @@ export class LifelogProcessor {
     this.database = new LifelogDatabase(dbPath)
   }
 
-  async processStarredLifelogs(): Promise<{
+  async processAllLifelogs(): Promise<{
     fetched: number
     processed: number
     skipped: number
@@ -21,15 +21,15 @@ export class LifelogProcessor {
     newLifelogs: Lifelog[]
     errors: ProcessingError[]
   }> {
-    console.log('Fetching starred lifelogs...')
+    console.log('Fetching all lifelogs...')
 
-    let allStarredLifelogs: Lifelog[]
+    let allLifelogs: Lifelog[]
     try {
-      allStarredLifelogs = await this.service.fetchStarredLifelogs()
+      allLifelogs = await this.service.fetchAllLifelogs()
     } catch (error) {
       if (error instanceof LimitlessApiError) {
         throw new ProcessingError(
-          'Failed to fetch starred lifelogs from API',
+          'Failed to fetch lifelogs from API',
           undefined,
           error,
         )
@@ -44,7 +44,7 @@ export class LifelogProcessor {
       throw error
     }
 
-    console.log(`Found ${allStarredLifelogs.length} starred lifelogs`)
+    console.log(`Found ${allLifelogs.length} lifelogs`)
 
     const newLifelogs: Lifelog[] = []
     const errors: ProcessingError[] = []
@@ -52,7 +52,7 @@ export class LifelogProcessor {
     let skipped = 0
     let failed = 0
 
-    for (const lifelog of allStarredLifelogs) {
+    for (const lifelog of allLifelogs) {
       try {
         if (this.database.isProcessed(lifelog.id)) {
           console.log(`Skipping already processed lifelog: ${lifelog.title}`)
@@ -79,7 +79,7 @@ export class LifelogProcessor {
     }
 
     return {
-      fetched: allStarredLifelogs.length,
+      fetched: allLifelogs.length,
       processed,
       skipped,
       failed,

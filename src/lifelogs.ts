@@ -8,32 +8,30 @@ export class LifelogService {
     this.client = client
   }
 
-  async fetchStarredLifelogs(): Promise<Lifelog[]> {
-    const allStarredLifelogs: Lifelog[] = []
+  async fetchAllLifelogs(): Promise<Lifelog[]> {
+    const allLifelogs: Lifelog[] = []
     let cursor: string | undefined
 
     do {
       const response = await this.client.getLifelogs({
-        isStarred: true,
         cursor: cursor || undefined,
         includeMarkdown: true,
         includeHeadings: true,
       })
 
-      allStarredLifelogs.push(...response.data.lifelogs)
+      allLifelogs.push(...response.data.lifelogs)
       cursor = response.meta.lifelogs.nextCursor
     } while (cursor)
 
-    return allStarredLifelogs
+    return allLifelogs
   }
 
-  async fetchStarredLifelogsPage(cursor?: string): Promise<{
+  async fetchLifelogsPage(cursor?: string): Promise<{
     lifelogs: Lifelog[]
     nextCursor?: string
     count: number
   }> {
     const response = await this.client.getLifelogs({
-      isStarred: true,
       cursor,
       includeMarkdown: true,
       includeHeadings: true,

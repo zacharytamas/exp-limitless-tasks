@@ -14,7 +14,7 @@ beforeEach(() => {
   service = new LifelogService(mockClient as any)
 })
 
-test('LifelogService - should fetch single page of starred lifelogs', async () => {
+test('LifelogService - should fetch single page of lifelogs', async () => {
   const mockLifelogs = [
     createMockLifelog({ id: 'lifelog-1', title: 'First Lifelog' }),
     createMockLifelog({ id: 'lifelog-2', title: 'Second Lifelog' }),
@@ -23,7 +23,7 @@ test('LifelogService - should fetch single page of starred lifelogs', async () =
   const mockResponse = createMockLifelogsResponse(mockLifelogs)
   mockClient.addResponse(mockResponse)
 
-  const result = await service.fetchStarredLifelogsPage()
+  const result = await service.fetchLifelogsPage()
 
   expect(result.lifelogs).toHaveLength(2)
   expect(result.lifelogs[0]?.id).toBe('lifelog-1')
@@ -35,7 +35,6 @@ test('LifelogService - should fetch single page of starred lifelogs', async () =
   const callHistory = mockClient.getCallHistory()
   expect(callHistory).toHaveLength(1)
   expect(callHistory[0]?.params).toEqual({
-    isStarred: true,
     cursor: undefined,
     includeMarkdown: true,
     includeHeadings: true,
@@ -50,7 +49,7 @@ test('LifelogService - should fetch single page with cursor', async () => {
   )
   mockClient.addResponse(mockResponse)
 
-  const result = await service.fetchStarredLifelogsPage('cursor-123')
+  const result = await service.fetchLifelogsPage('cursor-123')
 
   expect(result.lifelogs).toHaveLength(1)
   expect(result.nextCursor).toBe('next-cursor-123')
@@ -59,7 +58,7 @@ test('LifelogService - should fetch single page with cursor', async () => {
   expect(callHistory[0]?.params?.cursor).toBe('cursor-123')
 })
 
-test('LifelogService - should fetch all starred lifelogs with pagination', async () => {
+test('LifelogService - should fetch all lifelogs with pagination', async () => {
   // First page
   const page1Lifelogs = [
     createMockLifelog({ id: 'lifelog-1', title: 'Page 1 - Lifelog 1' }),
@@ -89,7 +88,7 @@ test('LifelogService - should fetch all starred lifelogs with pagination', async
   mockClient.addResponse(page2Response)
   mockClient.addResponse(page3Response)
 
-  const allLifelogs = await service.fetchStarredLifelogs()
+  const allLifelogs = await service.fetchAllLifelogs()
 
   expect(allLifelogs).toHaveLength(4)
   expect(allLifelogs[0]?.id).toBe('lifelog-1')
@@ -115,7 +114,7 @@ test('LifelogService - should handle empty results', async () => {
   const emptyResponse = createMockLifelogsResponse([])
   mockClient.addResponse(emptyResponse)
 
-  const result = await service.fetchStarredLifelogsPage()
+  const result = await service.fetchLifelogsPage()
 
   expect(result.lifelogs).toHaveLength(0)
   expect(result.count).toBe(0)
@@ -127,7 +126,7 @@ test('LifelogService - should handle single page with no pagination', async () =
   const mockResponse = createMockLifelogsResponse(mockLifelogs) // No next cursor
   mockClient.addResponse(mockResponse)
 
-  const allLifelogs = await service.fetchStarredLifelogs()
+  const allLifelogs = await service.fetchAllLifelogs()
 
   expect(allLifelogs).toHaveLength(1)
   expect(allLifelogs[0]?.id).toBe('single-lifelog')
@@ -137,10 +136,10 @@ test('LifelogService - should handle single page with no pagination', async () =
 test('LifelogService - should propagate API errors', async () => {
   // Don't add any responses, so mock client will throw error
 
-  expect(service.fetchStarredLifelogsPage()).rejects.toThrow(
+  expect(service.fetchLifelogsPage()).rejects.toThrow(
     'Mock client: No more responses configured',
   )
-  expect(service.fetchStarredLifelogs()).rejects.toThrow(
+  expect(service.fetchAllLifelogs()).rejects.toThrow(
     'Mock client: No more responses configured',
   )
 })

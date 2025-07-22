@@ -3,19 +3,19 @@ import { ProcessingError } from './errors'
 import { LifelogProcessor } from './processor'
 
 async function main() {
-  console.log('🚀 Starting Limitless AI starred lifelogs processor...')
+  console.log('🚀 Starting Limitless AI lifelogs processor...')
 
   const client = new LimitlessApiClient()
   const processor = new LifelogProcessor(client)
 
   try {
     const startTime = Date.now()
-    const result = await processor.processStarredLifelogs()
+    const result = await processor.processAllLifelogs()
     const endTime = Date.now()
     const duration = ((endTime - startTime) / 1000).toFixed(2)
 
     console.log('\n📊 Processing Results:')
-    console.log(`  Fetched: ${result.fetched} starred lifelogs`)
+    console.log(`  Fetched: ${result.fetched} lifelogs`)
     console.log(`  Processed: ${result.processed} new lifelogs`)
     console.log(`  Skipped: ${result.skipped} already processed`)
     console.log(`  Failed: ${result.failed} processing errors`)
