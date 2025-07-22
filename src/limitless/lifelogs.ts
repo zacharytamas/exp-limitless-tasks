@@ -13,10 +13,10 @@ export class LifelogService {
     this.client = client
   }
 
-  async fetchAllLifelogs(options: FetchLifelogsOptions = {}): Promise<Lifelog[]> {
+  async fetchLifelogs(options: FetchLifelogsOptions = {}): Promise<Lifelog[]> {
     const {
-      maxRequests = 20,
-      limit = 50,
+      maxRequests = 1,
+      limit = 100,
       includeMarkdown = true,
       includeHeadings = true,
       direction = 'desc',

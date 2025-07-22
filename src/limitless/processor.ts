@@ -25,7 +25,7 @@ export class LifelogProcessor {
 
     let allLifelogs: Lifelog[]
     try {
-      allLifelogs = await this.service.fetchAllLifelogs()
+      allLifelogs = await this.service.fetchLifelogs()
     } catch (error) {
       if (error instanceof LimitlessApiError) {
         throw new ProcessingError('Failed to fetch starred lifelogs from API', undefined, error)

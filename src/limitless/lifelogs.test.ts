@@ -11,6 +11,7 @@ let service: LifelogService
 
 beforeEach(() => {
   mockClient = new MockLimitlessApiClient()
+  // biome-ignore lint/suspicious/noExplicitAny: The mock is intentionally partial for testing simplicity.
   service = new LifelogService(mockClient as any)
 })
 
@@ -75,7 +76,7 @@ test('LifelogService - should fetch all lifelogs with pagination', async () => {
   mockClient.addResponse(page2Response)
   mockClient.addResponse(page3Response)
 
-  const allLifelogs = await service.fetchAllLifelogs()
+  const allLifelogs = await service.fetchLifelogs()
 
   expect(allLifelogs).toHaveLength(4)
   expect(allLifelogs[0]?.id).toBe('lifelog-1')
@@ -113,7 +114,7 @@ test('LifelogService - should handle single page with no pagination', async () =
   const mockResponse = createMockLifelogsResponse(mockLifelogs) // No next cursor
   mockClient.addResponse(mockResponse)
 
-  const allLifelogs = await service.fetchAllLifelogs()
+  const allLifelogs = await service.fetchLifelogs()
 
   expect(allLifelogs).toHaveLength(1)
   expect(allLifelogs[0]?.id).toBe('single-lifelog')
@@ -123,10 +124,6 @@ test('LifelogService - should handle single page with no pagination', async () =
 test('LifelogService - should propagate API errors', async () => {
   // Don't add any responses, so mock client will throw error
 
-  expect(service.fetchLifelogsPage()).rejects.toThrow(
-    'Mock client: No more responses configured',
-  )
-  expect(service.fetchAllLifelogs()).rejects.toThrow(
-    'Mock client: No more responses configured',
-  )
+  expect(service.fetchLifelogsPage()).rejects.toThrow('Mock client: No more responses configured')
+  expect(service.fetchLifelogs()).rejects.toThrow('Mock client: No more responses configured')
 })
