@@ -1,7 +1,7 @@
 export {
   LimitlessApiError,
   ProcessingError,
-  ValidationError,
+  ValidationError as ValidationErrorEffect,
 } from './limitless/errors'
 export { LifelogProcessor } from './limitless/processor'
 export type {

@@ -6,19 +6,10 @@ export class LimitlessApiError extends Data.TaggedError('LimitlessApiError')<{
   statusText?: string
 }> {}
 
-export class ValidationErrorEffect extends Data.TaggedError('ValidationError')<{
+export class ValidationError extends Data.TaggedError('ValidationError')<{
+  message: string
   zodError?: ZodError
 }> {}
-
-export class ValidationError extends Error {
-  constructor(
-    message: string,
-    public validationDetails?: unknown,
-  ) {
-    super(message)
-    this.name = 'ValidationError'
-  }
-}
 
 export class DatabaseError extends Data.TaggedError('DatabaseError')<{
   cause?: Error

@@ -2,7 +2,7 @@ import { Effect, Redacted } from 'effect'
 import { ZodError } from 'zod'
 
 import env from '../env'
-import { LimitlessApiError, ValidationErrorEffect } from './errors'
+import { LimitlessApiError, ValidationError } from './errors'
 import { LifelogsResponseSchema } from './schemas'
 
 export interface GetLifelogsParams {
@@ -93,7 +93,7 @@ export class LimitlessAIApi extends Effect.Service<LimitlessAIApi>()('limitless/
           return yield* Effect.try({
             try: () => LifelogsResponseSchema.parse(rawResponse),
             catch: (error) =>
-              new ValidationErrorEffect({
+              new ValidationError({
                 zodError: error instanceof ZodError ? error : undefined,
               }),
           })

@@ -1,27 +1,27 @@
 import { expect, test } from 'bun:test'
+import { ZodError } from 'zod'
 import { DatabaseError, LimitlessApiError, ProcessingError, ValidationError } from './errors'
 
 test('ValidationError - should create error with validation details', () => {
-  const validationDetails = {
-    field: 'email',
-    expected: 'string',
-    received: 'number',
-  }
+  const zodError = new ZodError([])
 
-  const error = new ValidationError('Validation failed for email field', validationDetails)
+  const error = new ValidationError({
+    message: 'Validation failed for email field',
+    zodError,
+  })
 
-  expect(error.name).toBe('ValidationError')
+  expect(error._tag).toBe('ValidationError')
   expect(error.message).toBe('Validation failed for email field')
-  expect(error.validationDetails).toEqual(validationDetails)
+  expect(error.zodError).toEqual(zodError)
   expect(error instanceof Error).toBe(true)
 })
 
 test('ValidationError - should work without validation details', () => {
-  const error = new ValidationError('Generic validation error')
+  const error = new ValidationError({ message: 'Generic validation error' })
 
-  expect(error.name).toBe('ValidationError')
+  expect(error._tag).toBe('ValidationError')
   expect(error.message).toBe('Generic validation error')
-  expect(error.validationDetails).toBeUndefined()
+  expect(error.zodError).toBeUndefined()
 })
 
 test('DatabaseError - should create error with cause', () => {
@@ -68,7 +68,7 @@ test('ProcessingError - should work with minimal parameters', () => {
 
 test('Error inheritance - should maintain Error prototype chain', () => {
   const apiError = new LimitlessApiError({})
-  const validationError = new ValidationError('Validation error')
+  const validationError = new ValidationError({ message: 'Validation error' })
   const dbError = new DatabaseError({ message: 'DB error' })
   const processingError = new ProcessingError({ message: 'Processing error' })
 
@@ -120,7 +120,7 @@ test('Error chaining - should properly chain errors', () => {
 test('Error matching - should work with instanceof checks', () => {
   const errors = [
     new LimitlessApiError({}),
-    new ValidationError('Validation error'),
+    new ValidationError({ message: 'Validation error' }),
     new DatabaseError({ message: 'DB error' }),
     new ProcessingError({ message: 'Processing error' }),
   ]
