@@ -1,5 +1,4 @@
 export {
-  DatabaseError,
   LimitlessApiError,
   ProcessingError,
   ValidationError,

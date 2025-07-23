@@ -2,7 +2,7 @@ import { Database } from 'bun:sqlite'
 import { Effect } from 'effect'
 
 import env from './env'
-import { DatabaseError, DatabaseErrorEffect } from './limitless/errors'
+import { DatabaseError } from './limitless/errors'
 import type { Lifelog } from './limitless/schemas'
 
 export class SqliteDatabase extends Effect.Service<SqliteDatabase>()('sys/Database', {
@@ -37,7 +37,7 @@ export class LifelogDatabase extends Effect.Service<LifelogDatabase>()('app/Data
         ON processed_lifelogs(updated_at)
       `)
     } catch (e: unknown) {
-      yield* Effect.fail(new DatabaseErrorEffect({ cause: e instanceof Error ? e : undefined }))
+      yield* Effect.fail(new DatabaseError({ cause: e instanceof Error ? e : undefined }))
     }
 
     return {
@@ -46,10 +46,10 @@ export class LifelogDatabase extends Effect.Service<LifelogDatabase>()('app/Data
           const stmt = db.prepare('SELECT 1 FROM processed_lifelogs WHERE id = ?')
           return stmt.get(lifelogId) !== null
         } catch (error) {
-          throw new DatabaseError(
-            `Failed to check if lifelog ${lifelogId} is processed`,
-            error as Error,
-          )
+          throw new DatabaseError({
+            cause: error instanceof Error ? error : undefined,
+            message: `Failed to check if lifelog ${lifelogId} is processed`,
+          })
         }
       },
 
@@ -62,10 +62,10 @@ export class LifelogDatabase extends Effect.Service<LifelogDatabase>()('app/Data
 
           stmt.run(lifelog.id, lifelog.title, lifelog.updatedAt, lifelog.startTime, lifelog.endTime)
         } catch (error) {
-          throw new DatabaseError(
-            `Failed to mark lifelog ${lifelog.id} as processed`,
-            error as Error,
-          )
+          throw new DatabaseError({
+            cause: error instanceof Error ? error : undefined,
+            message: `Failed to mark lifelog ${lifelog.id} as processed`,
+          })
         }
       },
 

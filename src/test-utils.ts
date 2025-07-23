@@ -1,3 +1,6 @@
+import { Effect } from 'effect'
+import { UnknownException } from 'effect/Cause'
+
 import { type GetLifelogsParams, LimitlessAIApi } from './limitless/api'
 import type { Lifelog, LifelogsResponse } from './limitless/schemas'
 
@@ -10,20 +13,23 @@ export const mockLimitlessAIApi = () => {
   let currentResponseIndex = 0
 
   const mock = new LimitlessAIApi({
-    async getLifelogs(params?: GetLifelogsParams): Promise<LifelogsResponse> {
-      callHistory.push({ params, timestamp: Date.now() })
+    getLifelogs(params?: GetLifelogsParams) {
+      return Effect.gen(function* () {
+        callHistory.push({ params, timestamp: Date.now() })
 
-      if (currentResponseIndex >= responses.length) {
-        throw new Error('Mock client: No more responses configured')
-      }
+        const response = responses[currentResponseIndex]
+        if (!response) {
+          return yield* Effect.fail(
+            new UnknownException(undefined, 'Mock client: No more responses configured'),
+          )
+        }
+        currentResponseIndex++
 
-      const response = responses[currentResponseIndex]
-      currentResponseIndex++
+        // Simulate network delay
+        yield* Effect.sleep(0)
 
-      // Simulate network delay
-      await new Promise((resolve) => setTimeout(resolve, 0))
-
-      return response
+        return yield* Effect.succeed(response)
+      })
     },
   })
 

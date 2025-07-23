@@ -1,29 +1,6 @@
 import { expect, test } from 'bun:test'
 import { DatabaseError, LimitlessApiError, ProcessingError, ValidationError } from './errors'
 
-test('LimitlessApiError - should create error with status code and response', () => {
-  const error = new LimitlessApiError(
-    'API request failed: 401 Unauthorized',
-    401,
-    '{"error": "Invalid API key"}',
-  )
-
-  expect(error.name).toBe('LimitlessApiError')
-  expect(error.message).toBe('API request failed: 401 Unauthorized')
-  expect(error.statusCode).toBe(401)
-  expect(error.response).toBe('{"error": "Invalid API key"}')
-  expect(error instanceof Error).toBe(true)
-})
-
-test('LimitlessApiError - should work without optional parameters', () => {
-  const error = new LimitlessApiError('Generic API error')
-
-  expect(error.name).toBe('LimitlessApiError')
-  expect(error.message).toBe('Generic API error')
-  expect(error.statusCode).toBeUndefined()
-  expect(error.response).toBeUndefined()
-})
-
 test('ValidationError - should create error with validation details', () => {
   const validationDetails = {
     field: 'email',
@@ -49,7 +26,7 @@ test('ValidationError - should work without validation details', () => {
 
 test('DatabaseError - should create error with cause', () => {
   const causeError = new Error('SQLite constraint violation')
-  const error = new DatabaseError('Failed to insert record', causeError)
+  const error = new DatabaseError({ message: 'Failed to insert record', cause: causeError })
 
   expect(error.name).toBe('DatabaseError')
   expect(error.message).toBe('Failed to insert record')
@@ -58,7 +35,7 @@ test('DatabaseError - should create error with cause', () => {
 })
 
 test('DatabaseError - should work without cause', () => {
-  const error = new DatabaseError('Database connection failed')
+  const error = new DatabaseError({ message: 'Database connection failed' })
 
   expect(error.name).toBe('DatabaseError')
   expect(error.message).toBe('Database connection failed')
@@ -67,7 +44,11 @@ test('DatabaseError - should work without cause', () => {
 
 test('ProcessingError - should create error with lifelog ID and cause', () => {
   const causeError = new Error('Network timeout')
-  const error = new ProcessingError('Failed to process lifelog', 'lifelog-123', causeError)
+  const error = new ProcessingError({
+    message: 'Failed to process lifelog',
+    lifelogId: 'lifelog-123',
+    cause: causeError,
+  })
 
   expect(error.name).toBe('ProcessingError')
   expect(error.message).toBe('Failed to process lifelog')
@@ -77,7 +58,7 @@ test('ProcessingError - should create error with lifelog ID and cause', () => {
 })
 
 test('ProcessingError - should work with minimal parameters', () => {
-  const error = new ProcessingError('Generic processing error')
+  const error = new ProcessingError({ message: 'Generic processing error' })
 
   expect(error.name).toBe('ProcessingError')
   expect(error.message).toBe('Generic processing error')
@@ -86,10 +67,10 @@ test('ProcessingError - should work with minimal parameters', () => {
 })
 
 test('Error inheritance - should maintain Error prototype chain', () => {
-  const apiError = new LimitlessApiError('API error')
+  const apiError = new LimitlessApiError({})
   const validationError = new ValidationError('Validation error')
-  const dbError = new DatabaseError('DB error')
-  const processingError = new ProcessingError('Processing error')
+  const dbError = new DatabaseError({ message: 'DB error' })
+  const processingError = new ProcessingError({ message: 'Processing error' })
 
   // All should be instances of Error
   expect(apiError instanceof Error).toBe(true)
@@ -105,20 +86,18 @@ test('Error inheritance - should maintain Error prototype chain', () => {
 })
 
 test('Error serialization - should be JSON serializable', () => {
-  const error = new LimitlessApiError('API error', 500, 'Internal server error')
+  const error = new LimitlessApiError({ status: 500, statusText: 'Internal server error' })
 
   // Should be able to serialize key properties
   const serialized = {
-    name: error.name,
-    message: error.message,
-    statusCode: error.statusCode,
-    response: error.response,
+    name: error._tag,
+    statusCode: error.status,
+    response: error.statusText,
   }
 
   expect(JSON.stringify(serialized)).toBeDefined()
   expect(JSON.parse(JSON.stringify(serialized))).toEqual({
     name: 'LimitlessApiError',
-    message: 'API error',
     statusCode: 500,
     response: 'Internal server error',
   })
@@ -126,12 +105,12 @@ test('Error serialization - should be JSON serializable', () => {
 
 test('Error chaining - should properly chain errors', () => {
   const rootCause = new Error('Root cause error')
-  const dbError = new DatabaseError('Database operation failed', rootCause)
-  const processingError = new ProcessingError(
-    'Processing failed due to database error',
-    'lifelog-456',
-    dbError,
-  )
+  const dbError = new DatabaseError({ message: 'Database operation failed', cause: rootCause })
+  const processingError = new ProcessingError({
+    message: 'Processing failed due to database error',
+    lifelogId: 'lifelog-456',
+    cause: dbError,
+  })
 
   expect(processingError.cause).toBe(dbError)
   expect(processingError.cause?.cause).toBe(rootCause)
@@ -140,10 +119,10 @@ test('Error chaining - should properly chain errors', () => {
 
 test('Error matching - should work with instanceof checks', () => {
   const errors = [
-    new LimitlessApiError('API error'),
+    new LimitlessApiError({}),
     new ValidationError('Validation error'),
-    new DatabaseError('DB error'),
-    new ProcessingError('Processing error'),
+    new DatabaseError({ message: 'DB error' }),
+    new ProcessingError({ message: 'Processing error' }),
   ]
 
   expect(errors[0] instanceof LimitlessApiError).toBe(true)

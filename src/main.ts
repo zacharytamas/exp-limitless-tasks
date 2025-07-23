@@ -10,7 +10,7 @@ const program = Effect.gen(function* () {
 
   try {
     const startTime = Date.now()
-    const result = yield* Effect.promise(() => processor.processAllLifelogs())
+    const result = yield* processor.processAllLifelogs()
     const endTime = Date.now()
     const duration = ((endTime - startTime) / 1000).toFixed(2)
 

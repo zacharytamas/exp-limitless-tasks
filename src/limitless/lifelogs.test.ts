@@ -17,7 +17,7 @@ test('LifelogService - should fetch single page of lifelogs', async () => {
   await Effect.runPromise(
     Effect.gen(function* () {
       const service = yield* LifelogsService
-      const result = yield* Effect.promise(() => service.fetchLifelogsPage())
+      const result = yield* service.fetchLifelogsPage()
 
       expect(result.lifelogs).toHaveLength(2)
       expect(result.lifelogs[0]?.id).toBe('lifelog-1')
@@ -49,7 +49,7 @@ test('LifelogService - should fetch single page with cursor', async () => {
   await Effect.runPromise(
     Effect.gen(function* () {
       const service = yield* LifelogsService
-      const result = yield* Effect.promise(() => service.fetchLifelogsPage('cursor-123'))
+      const result = yield* service.fetchLifelogsPage('cursor-123')
 
       expect(result.lifelogs).toHaveLength(1)
       expect(result.nextCursor).toBe('next-cursor-123')
@@ -87,7 +87,7 @@ test('LifelogService - should fetch all lifelogs with pagination', async () => {
   await Effect.runPromise(
     Effect.gen(function* () {
       const service = yield* LifelogsService
-      const allLifelogs = yield* Effect.promise(() => service.fetchLifelogs())
+      const allLifelogs = yield* service.fetchLifelogs()
 
       expect(allLifelogs).toHaveLength(4)
       expect(allLifelogs[0]?.id).toBe('lifelog-1')
@@ -122,7 +122,7 @@ test('LifelogService - should handle empty results', async () => {
   await Effect.runPromise(
     Effect.gen(function* () {
       const service = yield* LifelogsService
-      const result = yield* Effect.promise(() => service.fetchLifelogsPage())
+      const result = yield* service.fetchLifelogsPage()
 
       expect(result.lifelogs).toHaveLength(0)
       expect(result.count).toBe(0)
@@ -143,7 +143,7 @@ test('LifelogService - should handle single page with no pagination', async () =
   await Effect.runPromise(
     Effect.gen(function* () {
       const service = yield* LifelogsService
-      const allLifelogs = yield* Effect.promise(() => service.fetchLifelogs())
+      const allLifelogs = yield* service.fetchLifelogs()
 
       expect(allLifelogs).toHaveLength(1)
       expect(allLifelogs[0]?.id).toBe('single-lifelog')
@@ -164,7 +164,7 @@ test('LifelogService - should propagate API errors', async () => {
     Effect.runPromise(
       Effect.gen(function* () {
         const service = yield* LifelogsService
-        yield* Effect.promise(() => service.fetchLifelogsPage())
+        yield* service.fetchLifelogsPage()
       }).pipe(
         Effect.provide(LifelogsService.DefaultWithoutDependencies),
         Effect.provideService(LimitlessAIApi, mockClient.mock),
@@ -176,7 +176,7 @@ test('LifelogService - should propagate API errors', async () => {
     Effect.runPromise(
       Effect.gen(function* () {
         const service = yield* LifelogsService
-        yield* Effect.promise(() => service.fetchLifelogs())
+        yield* service.fetchLifelogs()
       }).pipe(
         Effect.provide(LifelogsService.DefaultWithoutDependencies),
         Effect.provideService(LimitlessAIApi, mockClient.mock),

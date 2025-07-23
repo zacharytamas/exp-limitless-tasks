@@ -1,7 +1,8 @@
 import { Effect, Redacted } from 'effect'
+import { ZodError } from 'zod'
 
 import env from '../env'
-import { LimitlessApiError, ValidationError } from './errors'
+import { LimitlessApiError, ValidationErrorEffect } from './errors'
 import { LifelogsResponseSchema } from './schemas'
 
 export interface GetLifelogsParams {
@@ -42,55 +43,61 @@ export class LimitlessAIApi extends Effect.Service<LimitlessAIApi>()('limitless/
   effect: Effect.gen(function* () {
     const config = yield* LimitlessAIApiConfig
 
-    async function request(endpoint: string, params?: Record<string, string>): Promise<unknown> {
-      const url = new URL(`${config.baseUrl}${endpoint}`)
-
-      if (params) {
-        Object.entries(params).forEach(([key, value]) => {
-          url.searchParams.set(key, value)
-        })
-      }
-
-      const response = await fetch(url.toString(), {
-        headers: { 'X-API-Key': Redacted.value(config.apiKey), 'Content-Type': 'application/json' },
-      })
-
-      if (!response.ok) {
-        const responseText = await response.text()
-        throw new LimitlessApiError(
-          `API request failed: ${response.status} ${response.statusText}`,
-          response.status,
-          responseText,
-        )
-      }
-
-      return response.json()
-    }
-
-    return {
-      async getLifelogs(params?: GetLifelogsParams) {
-        const queryParams: Record<string, string> = {}
+    const request = (endpoint: string, params?: Record<string, string>) =>
+      Effect.gen(function* () {
+        const url = new URL(`${config.baseUrl}${endpoint}`)
 
         if (params) {
           Object.entries(params).forEach(([key, value]) => {
-            if (value !== undefined) {
-              queryParams[key] = String(value)
-            }
+            url.searchParams.set(key, value)
           })
         }
 
-        try {
-          const rawResponse = await request('/v1/lifelogs', queryParams)
-          return LifelogsResponseSchema.parse(rawResponse)
-        } catch (error) {
-          if (error instanceof LimitlessApiError) {
-            throw error
-          }
-          if (error instanceof Error && error.name === 'ZodError') {
-            throw new ValidationError('API response validation failed', error)
-          }
-          throw error
+        const response = yield* Effect.promise(() =>
+          fetch(url.toString(), {
+            headers: {
+              'X-API-Key': Redacted.value(config.apiKey),
+              'Content-Type': 'application/json',
+            },
+          }),
+        )
+
+        if (!response.ok) {
+          return yield* Effect.promise(() =>
+            response
+              .text()
+              .then((statusText) =>
+                Effect.fail(new LimitlessApiError({ status: response.status, statusText })),
+              ),
+          )
         }
+
+        return yield* Effect.tryPromise(() => response.json())
+      })
+
+    return {
+      getLifelogs(params?: GetLifelogsParams) {
+        return Effect.gen(function* () {
+          const queryParams: Record<string, string> = {}
+
+          if (params) {
+            Object.entries(params).forEach(([key, value]) => {
+              if (value !== undefined) {
+                queryParams[key] = String(value)
+              }
+            })
+          }
+
+          const rawResponse = yield* request('/v1/lifelogs', queryParams)
+
+          return yield* Effect.try({
+            try: () => LifelogsResponseSchema.parse(rawResponse),
+            catch: (error) =>
+              new ValidationErrorEffect({
+                zodError: error instanceof ZodError ? error : undefined,
+              }),
+          })
+        })
       },
     } as const
   }),

@@ -28,7 +28,7 @@ test('LifelogProcessor - should process new lifelogs', async () => {
     Effect.withConfigProvider(
       Effect.gen(function* () {
         const processor = yield* LifelogProcessor
-        const result = yield* Effect.promise(() => processor.processAllLifelogs())
+        const result = yield* processor.processAllLifelogs()
 
         expect(result.fetched).toBe(2)
         expect(result.processed).toBe(2)
@@ -67,7 +67,7 @@ test('LifelogProcessor - should skip already processed lifelogs', async () => {
         const firstResponse = createMockLifelogsResponse(mockLifelogs)
         mockClient.addResponse(firstResponse)
 
-        const firstResult = yield* Effect.promise(() => processor.processAllLifelogs())
+        const firstResult = yield* processor.processAllLifelogs()
         expect(firstResult.processed).toBe(2)
         expect(firstResult.skipped).toBe(0)
 
@@ -76,7 +76,7 @@ test('LifelogProcessor - should skip already processed lifelogs', async () => {
         const secondResponse = createMockLifelogsResponse(mockLifelogs)
         mockClient.addResponse(secondResponse)
 
-        const secondResult = yield* Effect.promise(() => processor.processAllLifelogs())
+        const secondResult = yield* processor.processAllLifelogs()
         expect(secondResult.fetched).toBe(2)
         expect(secondResult.processed).toBe(0)
         expect(secondResult.skipped).toBe(2)
@@ -109,14 +109,14 @@ test('LifelogProcessor - should handle mixed new and processed lifelogs', async 
         // First run - process lifelog1
         const firstResponse = createMockLifelogsResponse([lifelog1])
         mockClient.addResponse(firstResponse)
-        yield* Effect.promise(() => processor.processAllLifelogs())
+        yield* processor.processAllLifelogs()
 
         // Second run - lifelog1 (processed) + lifelog2 (new)
         mockClient.reset()
         const secondResponse = createMockLifelogsResponse([lifelog1, lifelog2])
         mockClient.addResponse(secondResponse)
 
-        const result = yield* Effect.promise(() => processor.processAllLifelogs())
+        const result = yield* processor.processAllLifelogs()
         expect(result.fetched).toBe(2)
         expect(result.processed).toBe(1)
         expect(result.skipped).toBe(1)
@@ -156,7 +156,7 @@ test('LifelogProcessor - should handle pagination', async () => {
     Effect.withConfigProvider(
       Effect.gen(function* () {
         const processor = yield* LifelogProcessor
-        const result = yield* Effect.promise(() => processor.processAllLifelogs())
+        const result = yield* processor.processAllLifelogs()
 
         expect(result.fetched).toBe(3)
         expect(result.processed).toBe(3)
@@ -185,7 +185,7 @@ test('LifelogProcessor - should handle empty results', async () => {
     Effect.withConfigProvider(
       Effect.gen(function* () {
         const processor = yield* LifelogProcessor
-        const result = yield* Effect.promise(() => processor.processAllLifelogs())
+        const result = yield* processor.processAllLifelogs()
 
         expect(result.fetched).toBe(0)
         expect(result.processed).toBe(0)
@@ -218,7 +218,7 @@ test('LifelogProcessor - should handle API errors gracefully', async () => {
       Effect.withConfigProvider(
         Effect.gen(function* () {
           const processor = yield* LifelogProcessor
-          yield* Effect.promise(() => processor.processAllLifelogs())
+          yield* processor.processAllLifelogs()
         }).pipe(
           Effect.provide(LifelogProcessor.DefaultWithoutDependencies),
           Effect.provide(LifelogsService.DefaultWithoutDependencies),
@@ -254,7 +254,7 @@ test('LifelogProcessor - should provide accurate statistics', async () => {
         const mockResponse = createMockLifelogsResponse(mockLifelogs)
         mockClient.addResponse(mockResponse)
 
-        yield* Effect.promise(() => processor.processAllLifelogs())
+        yield* processor.processAllLifelogs()
 
         // Updated stats
         stats = processor.getStats()

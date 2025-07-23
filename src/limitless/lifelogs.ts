@@ -10,59 +10,64 @@ export class LifelogsService extends Effect.Service<LifelogsService>()(
       const api = yield* LimitlessAIApi
 
       return {
-        async fetchLifelogsPage(cursor?: string) {
-          const response = await api.getLifelogs({
-            cursor,
-            includeHeadings: true,
-            includeMarkdown: true,
-          })
-          return {
-            lifelogs: response.data.lifelogs,
-            nextCursor: response.meta.lifelogs.nextCursor,
-            count: response.meta.lifelogs.count,
-          }
-        },
-
-        async fetchLifelogs(options: FetchLifelogsOptions = {}): Promise<Lifelog[]> {
-          const {
-            limit = 10,
-            includeMarkdown = true,
-            includeHeadings = true,
-            direction = 'desc',
-            ...apiParams
-          } = options
-
-          const allLifelogs: Lifelog[] = []
-          let cursor: string | undefined
-
-          do {
-            // Cap per-request limit at 10 (API maximum)
-            const remainingItems = limit - allLifelogs.length
-            const perRequestLimit = Math.min(10, remainingItems)
-
-            if (perRequestLimit <= 0) {
-              break
-            }
-
-            const response = await api.getLifelogs({
-              ...apiParams,
-              cursor: cursor || undefined,
-              includeMarkdown,
-              includeHeadings,
-              direction,
-              limit: perRequestLimit,
+        fetchLifelogsPage(cursor?: string) {
+          return Effect.gen(function* () {
+            const response = yield* api.getLifelogs({
+              cursor,
+              includeHeadings: true,
+              includeMarkdown: true,
             })
 
-            allLifelogs.push(...response.data.lifelogs)
-            cursor = response.meta.lifelogs.nextCursor
-
-            // Stop if we've reached our limit
-            if (allLifelogs.length >= limit) {
-              break
+            return {
+              lifelogs: response.data.lifelogs,
+              nextCursor: response.meta.lifelogs.nextCursor,
+              count: response.meta.lifelogs.count,
             }
-          } while (cursor)
+          })
+        },
 
-          return allLifelogs.slice(0, limit)
+        fetchLifelogs(options: FetchLifelogsOptions = {}) {
+          return Effect.gen(function* () {
+            const {
+              limit = 10,
+              includeMarkdown = true,
+              includeHeadings = true,
+              direction = 'desc',
+              ...apiParams
+            } = options
+
+            const allLifelogs: Lifelog[] = []
+            let cursor: string | undefined
+
+            do {
+              // Cap per-request limit at 10 (API maximum)
+              const remainingItems = limit - allLifelogs.length
+              const perRequestLimit = Math.min(10, remainingItems)
+
+              if (perRequestLimit <= 0) {
+                break
+              }
+
+              const response = yield* api.getLifelogs({
+                ...apiParams,
+                cursor: cursor || undefined,
+                includeMarkdown,
+                includeHeadings,
+                direction,
+                limit: perRequestLimit,
+              })
+
+              allLifelogs.push(...response.data.lifelogs)
+              cursor = response.meta.lifelogs.nextCursor
+
+              // Stop if we've reached our limit
+              if (allLifelogs.length >= limit) {
+                break
+              }
+            } while (cursor)
+
+            return allLifelogs.slice(0, limit)
+          })
         },
       } as const
     }),
